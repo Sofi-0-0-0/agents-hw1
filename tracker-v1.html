@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Трекер учебных задач</title>
+<style>
+  :root {
+    --bg: #f4f5f8;
+    --card: #ffffff;
+    --text: #1d2130;
+    --muted: #6b7185;
+    --line: #e3e6ee;
+    --accent: #4f5bd5;
+    --accent-soft: #eceefc;
+    --done: #2f9e6b;
+    --done-soft: #e5f5ed;
+    --danger: #d64545;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 24px; font-size: 15px; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(20, 24, 40, .06), 0 4px 16px rgba(20, 24, 40, .04);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  /* Сводка */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--bg); border-radius: 10px; padding: 12px; }
+  .stat-label { font-size: 13px; color: var(--muted); }
+  .stat-value { font-size: 22px; font-weight: 650; margin-top: 2px; }
+  .progress-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 14px; }
+  .progress-head strong { font-size: 18px; color: var(--done); }
+  .bar { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; width: 0; background: var(--done); border-radius: 99px; transition: width .35s ease; }
+  .progress-note { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  /* Форма */
+  form { display: grid; grid-template-columns: 1fr 110px auto; gap: 10px; }
+  label.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    font: inherit;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input.invalid { border-color: var(--danger); }
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 18px;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn:hover { filter: brightness(1.07); }
+  .btn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 1px; }
+  .error { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 6px; }
+
+  /* Фильтры */
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filters { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; }
+  .filters button {
+    font: inherit; font-size: 14px;
+    border: none; background: transparent; color: var(--muted);
+    padding: 7px 14px; border-radius: 8px; cursor: pointer;
+  }
+  .filters button.active { background: #fff; color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .filters .count { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .link-btn { font: inherit; font-size: 13px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 4px; }
+  .link-btn:hover { color: var(--text); }
+
+  /* Список */
+  ul { list-style: none; margin: 0; padding: 0; }
+  li.task {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  li.task:last-child { border-bottom: none; }
+  li.task:hover { background: #fafbfd; }
+  .check {
+    appearance: none; -webkit-appearance: none;
+    width: 22px; height: 22px; flex: none;
+    border: 2px solid #c3c8d6; border-radius: 6px;
+    cursor: pointer; display: grid; place-content: center;
+    background: #fff;
+  }
+  .check::after {
+    content: ""; width: 6px; height: 11px;
+    border: solid #fff; border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+    display: none;
+  }
+  .check:checked { background: var(--done); border-color: var(--done); }
+  .check:checked::after { display: block; }
+  .check:focus-visible { outline: 3px solid var(--accent-soft); }
+  .task-title { flex: 1; word-break: break-word; }
+  li.done .task-title { color: var(--muted); text-decoration: line-through; }
+  .hours {
+    flex: none; font-size: 13px; font-weight: 600;
+    padding: 3px 9px; border-radius: 99px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  li.done .hours { background: var(--done-soft); color: var(--done); }
+  .del {
+    flex: none; width: 32px; height: 32px;
+    border: none; background: transparent; color: #a3a9ba;
+    border-radius: 8px; cursor: pointer; font-size: 20px; line-height: 1;
+  }
+  .del:hover { background: #fdecec; color: var(--danger); }
+  .empty { text-align: center; color: var(--muted); padding: 28px 8px; font-size: 15px; }
+
+  @media (max-width: 520px) {
+    form { grid-template-columns: 1fr 90px; }
+    form .btn { grid-column: 1 / -1; }
+    .stat-value { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Трекер учебных задач</h1>
+  <p class="subtitle">Планируйте учёбу по часам и следите за прогрессом.</p>
+
+  <section class="card" aria-label="Сводка">
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Всего часов</div><div class="stat-value" id="totalHours">0</div></div>
+      <div class="stat"><div class="stat-label">Выполнено</div><div class="stat-value" id="doneHours">0</div></div>
+      <div class="stat"><div class="stat-label">Осталось</div><div class="stat-value" id="leftHours">0</div></div>
+    </div>
+    <div class="progress-head">
+      <span>Процент выполнения</span>
+      <strong id="percent">0%</strong>
+    </div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
+      <div class="bar-fill" id="barFill"></div>
+    </div>
+    <div class="progress-note" id="progressNote"></div>
+  </section>
+
+  <section class="card" aria-label="Новая задача">
+    <form id="addForm" novalidate>
+      <label class="sr" for="titleInput">Название задачи</label>
+      <input type="text" id="titleInput" placeholder="Название задачи" maxlength="120" autocomplete="off">
+      <label class="sr" for="hoursInput">Оценка в часах</label>
+      <input type="number" id="hoursInput" placeholder="Часы" min="0.5" max="100" step="0.5">
+      <button type="submit" class="btn">Добавить</button>
+    </form>
+    <div class="error" id="error" role="alert"></div>
+  </section>
+
+  <section class="card" aria-label="Список задач">
+    <div class="toolbar">
+      <div class="filters" role="tablist">
+        <button type="button" data-filter="all" class="active">Все<span class="count" id="cntAll"></span></button>
+        <button type="button" data-filter="active">Активные<span class="count" id="cntActive"></span></button>
+        <button type="button" data-filter="done">Готовые<span class="count" id="cntDone"></span></button>
+      </div>
+      <button type="button" class="link-btn" id="resetBtn">Вернуть пример</button>
+    </div>
+    <ul id="list"></ul>
+  </section>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = "study-tracker-v1";
+
+  function sampleTasks() {
+    return [
+      { id: 1, title: "Чтение",     hours: 2, done: true  },
+      { id: 2, title: "Практика",   hours: 4, done: false },
+      { id: 3, title: "Повторение", hours: 2, done: false }
+    ];
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (Array.isArray(data)) return data;
+      }
+    } catch (e) { /* хранилище недоступно — работаем в памяти */ }
+    return sampleTasks();
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch (e) {}
+  }
+
+  var tasks = load();
+  var filter = "all";
+
+  var listEl = document.getElementById("list");
+  var form = document.getElementById("addForm");
+  var titleInput = document.getElementById("titleInput");
+  var hoursInput = document.getElementById("hoursInput");
+  var errorEl = document.getElementById("error");
+
+  function fmt(n) {
+    var r = Math.round(n * 10) / 10;
+    return String(r).replace(".", ",") + " ч";
+  }
+
+  function nextId() {
+    return tasks.reduce(function (m, t) { return Math.max(m, t.id); }, 0) + 1;
+  }
+
+  function render() {
+    // Сводка
+    var total = 0, done = 0, doneCount = 0;
+    tasks.forEach(function (t) {
+      total += t.hours;
+      if (t.done) { done += t.hours; doneCount++; }
+    });
+    var pct = total > 0 ? Math.round(done / total * 100) : 0;
+
+    document.getElementById("totalHours").textContent = fmt(total);
+    document.getElementById("doneHours").textContent = fmt(done);
+    document.getElementById("leftHours").textContent = fmt(total - done);
+    document.getElementById("percent").textContent = pct + "%";
+    document.getElementById("barFill").style.width = pct + "%";
+    document.getElementById("bar").setAttribute("aria-valuenow", pct);
+    document.getElementById("progressNote").textContent = tasks.length
+      ? "Готово задач: " + doneCount + " из " + tasks.length + " · процент считается по часам"
+      : "Задач пока нет";
+
+    document.getElementById("cntAll").textContent = tasks.length;
+    document.getElementById("cntActive").textContent = tasks.length - doneCount;
+    document.getElementById("cntDone").textContent = doneCount;
+
+    // Список
+    var visible = tasks.filter(function (t) {
+      if (filter === "active") return !t.done;
+      if (filter === "done") return t.done;
+      return true;
+    });
+
+    listEl.innerHTML = "";
+    if (!visible.length) {
+      var empty = document.createElement("li");
+      empty.className = "empty";
+      empty.textContent = filter === "active" ? "Активных задач нет — отличная работа!"
+                        : filter === "done"   ? "Пока ничего не отмечено как готовое."
+                        : "Добавьте первую задачу выше.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    visible.forEach(function (t) {
+      var li = document.createElement("li");
+      li.className = "task" + (t.done ? " done" : "");
+
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "check";
+      cb.checked = t.done;
+      cb.setAttribute("aria-label", "Отметить «" + t.title + "» как готовое");
+      cb.addEventListener("change", function () {
+        t.done = cb.checked;
+        save(); render();
+      });
+
+      var title = document.createElement("span");
+      title.className = "task-title";
+      title.textContent = t.title;
+
+      var hours = document.createElement("span");
+      hours.className = "hours";
+      hours.textContent = fmt(t.hours);
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "del";
+      del.innerHTML = "&times;";
+      del.title = "Удалить";
+      del.setAttribute("aria-label", "Удалить «" + t.title + "»");
+      del.addEventListener("click", function () {
+        tasks = tasks.filter(function (x) { return x.id !== t.id; });
+        save(); render();
+      });
+
+      li.appendChild(cb);
+      li.appendChild(title);
+      li.appendChild(hours);
+      li.appendChild(del);
+      listEl.appendChild(li);
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var title = titleInput.value.trim();
+    var hours = parseFloat(String(hoursInput.value).replace(",", "."));
+    titleInput.classList.remove("invalid");
+    hoursInput.classList.remove("invalid");
+
+    if (!title) {
+      errorEl.textContent = "Введите название задачи.";
+      titleInput.classList.add("invalid");
+      titleInput.focus();
+      return;
+    }
+    if (!(hours > 0) || hours > 100) {
+      errorEl.textContent = "Укажите оценку в часах — число больше 0 и не больше 100.";
+      hoursInput.classList.add("invalid");
+      hoursInput.focus();
+      return;
+    }
+
+    errorEl.textContent = "";
+    tasks.push({ id: nextId(), title: title, hours: hours, done: false });
+    titleInput.value = "";
+    hoursInput.value = "";
+    if (filter === "done") setFilter("all");
+    save(); render();
+    titleInput.focus();
+  });
+
+  function setFilter(f) {
+    filter = f;
+    document.querySelectorAll(".filters button").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-filter") === f);
+    });
+  }
+
+  document.querySelectorAll(".filters button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      setFilter(b.getAttribute("data-filter"));
+      render();
+    });
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    tasks = sampleTasks();
+    setFilter("all");
+    save(); render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
