@@ -30,7 +30,7 @@
 ## Запуск трекеров
 Ничего устанавливать не нужно, сервер не требуется.
 
-1. Откройте папку `ИИ_дз1` в Finder.
+1. Cкачайте файлы и сложите их в папку (например, назовите папку ИИ_дз1)
 2. Дважды щёлкните `tracker-v2.html`, `tracker-v1.html` или `tracker-v1-corrected.html`. Файл откроется в браузере по умолчанию.
 3. Для проверки на телефонной ширине откройте инструменты разработчика (Chrome: ⌥⌘I → значок устройства) и задайте ширину 390 px.
 
@@ -47,8 +47,4 @@ python3 tests/run_t1_t5.py .
 python3 tests/run_tracker_checks.py tracker-v2.html
 ```
 
-Чтобы использовать установленный Chrome вместо скачанного Chromium, добавьте перед командой:
-`CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
 
-## Проверка спецификации (необязательно)
-Если установлен OpenSpec CLI, разложите документы в `openspec/changes/add-weekly-study-tracker/` и выполните `openspec validate add-weekly-study-tracker`. В рамках ДЗ валидатор не запускался.
